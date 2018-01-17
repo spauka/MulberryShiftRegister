@@ -22,10 +22,13 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#include <stdio.h>
+
 // Include generated header files
 #include "project.h"
 
 #include "usb_utils.h"
+#include "switch.h"
 
 /**
  * Returns the minimum of two values
@@ -46,6 +49,13 @@ void SPIM_TX_ISR_ExitCallback(void) {
 
 int main(void)
 {
+    uint8_t first_run = 0;
+    char buffer[64];
+    switches_t switch_states;
+
+    // Buffer used to store USB commands
+    usb_buf_t usb_input_buffer;
+
     CyGlobalIntEnable; /* Enable global interrupts. */
 
     /* Start the SPI interface */
@@ -54,8 +64,7 @@ int main(void)
     SPIM_Start();
 
     /* Empty the USB input buffer */
-    memset(usb_input_buffer.buf, 0x00, USBUART_BUFFER_SIZE);
-    usb_input_buffer.buf_size = 0;
+    init_usb_buffer(&usb_input_buffer);
     
     /* Start USBFS operation with 5-V operation. */
     USBUART_Start(USBFS_DEVICE, USBUART_5V_OPERATION);
@@ -63,11 +72,17 @@ int main(void)
     for(;;)
     {
         // Check for a USB UART config change
-        check_usb_uart_config_change();
+        // If it has changed, reset the buffer, this is an indication
+        // that the connected has restarted
+        if (check_usb_uart_config_change() == USB_CONFIG_CHANGED) {
+        }
 
         // Read in USB data
         if (USBUART_GetConfiguration() != USB_NOT_CONFIGURED) {
-            read_usb_data();
+            read_usb_data(&usb_input_buffer);
+
+            // Check whether there is a command terminator in the buffer
+            parse_usb_buffer(&usb_input_buffer, &switch_states);
         }
     }
 }

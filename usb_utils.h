@@ -33,13 +33,25 @@ typedef enum {
 	USB_NOT_READY = 0,
 	USB_BUF_OVERFLOW = 1,
 	USB_INVALID_BUF = 2,
+	USB_INVALID_CMD = 3,
 	USB_OTHER_FAIL = 0x7F,
+	USB_CONFIG_CHANGED = 0x80,
 	USB_SUCCESS = 0xFF
 } usb_status_t;
+
+typedef enum {
+	CMD_CLEAR, // Clear all switches
+	CMD_WRITE, // Write an arbitrary hex string (must be 160 bits)
+	CMD_CHOOSE, // Select one switch set (1-5) to open on all channels
+	CMD_LOAD, // Pulse the LD line, without changing shift registers
+	CMD_CLOCK, // Start the clock with no data (all zeros)
+	CMD_STOP // Stop all operations
+} command_t;
 
 // Define buffer parameters
 static const uint32_t USBFS_DEVICE = 0u;
 #define USBUART_BUFFER_SIZE (64u)
+#define USB_CMD_MAX_ARGS (12u)
 
 // Define CDC properties
 extern const char* parity[];
@@ -51,10 +63,13 @@ static const char term[] = "\r";
 typedef struct {
     char buf[USBUART_BUFFER_SIZE];
     size_t buf_size;
+    uint8_t overflow;
 } usb_buf_t;
 
-// Define an instance of the circular buffer
-extern usb_buf_t usb_input_buffer;
+/**
+ * Initialize USB buffer
+ */
+usb_status_t init_usb_buffer(usb_buf_t *buf);
 
 /**
  * Write USB Data, blocking until the device is ready.
@@ -69,11 +84,27 @@ usb_status_t check_usb_uart_config_change(void);
 /**
  * Read data in from the USB device.
  */
-usb_status_t read_usb_data(void);
+usb_status_t read_usb_data(usb_buf_t *usb_input_buffer);
 
 /**
  * Parse the USB buffer for completed commands
  */
-usb_status_t parse_usb_buffer(void);
+usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state);
+
+/**
+ * Extract parameters from a command
+ * Args:
+ * 		buffer: String containing the command passed in (space separated)
+ * 		cmd: Returns the extracted command
+ * 		argc: contains the maxmimum number of arguments that can be returned in argv.
+ * 			  This will be filled with the actual number of arguments returned.
+ * 		argv: array of pointers to strings of arguments
+ */
+usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **argv);
+
+/**
+ * Run a command based on a complete line of input.
+ */
+usb_status_t do_command(char *buffer);
 
 #endif
