@@ -35,6 +35,7 @@ usb_status_t init_usb_buffer(usb_buf_t *buf) {
     memset(buf->buf, 0x00, USBUART_BUFFER_SIZE);
     buf->buf_size = 0;
     buf->overflow = 0;
+    return USB_SUCCESS;
 }
 
 /**
@@ -163,27 +164,41 @@ usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **a
  * Parse command
  */
 usb_status_t do_command(char* buffer, switches_t *state) {
-    command_t cmd;
-    size_t argc;
-    char *argv[USB_CMD_MAX_ARGS];
+    command_t cmd = CMD_NOOP;
+    size_t argc = 0;
+    char *argv[USB_CMD_MAX_ARGS] = {0};
 
     // Create a buffer to send over SPI
     uint8_t out_buffer[SPIM_TX_BUFFER_SIZE];
 
     // Extract the command from the command line
+    // Unlike argc/argv in linux, this parameter counts the number of arguments,
+    // the command does not count.
     extract_params(buffer, &cmd, &argc, argv);
 
     // Switch on the extracted command
     switch(cmd) {
+    case CMD_NOOP:
+    	break;
     case CMD_CLEAR:
         switches_all(state, 0x00);
         switches_pack(state, out_buffer);
         SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
         break;
     case CMD_WRITE:
+
+    case CMD_SELECT:
+    	if (argc != 1) // Must be a single argument
+    		return USB_INVALID_NUM_ARGS;
+    	if (strlen(argv[0]) != 1) // Must be a single character
+    		return USB_INVALID_ARG;
+    	switches_all(state, switches_mask(argv[0][0]));
+    	switches_pack(state, out_buffer);
+    	SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
         break;
     default:
         //TODO: Write a default case here
         break;
     }
+    return USB_SUCCESS;
 }

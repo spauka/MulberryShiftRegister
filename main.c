@@ -49,8 +49,6 @@ void SPIM_TX_ISR_ExitCallback(void) {
 
 int main(void)
 {
-    uint8_t first_run = 0;
-    char buffer[64];
     switches_t switch_states;
 
     // Buffer used to store USB commands

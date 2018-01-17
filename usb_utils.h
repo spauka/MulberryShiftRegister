@@ -36,15 +36,18 @@ typedef enum {
 	USB_BUF_OVERFLOW = 1,
 	USB_INVALID_BUF = 2,
 	USB_INVALID_CMD = 3,
+	USB_INVALID_NUM_ARGS = 4,
+	USB_INVALID_ARG = 5,
 	USB_OTHER_FAIL = 0x7F,
 	USB_CONFIG_CHANGED = 0x80,
 	USB_SUCCESS = 0xFF
 } usb_status_t;
 
 typedef enum {
+	CMD_NOOP, // Do nothing
 	CMD_CLEAR, // Clear all switches
 	CMD_WRITE, // Write an arbitrary hex string (must be 160 bits)
-	CMD_CHOOSE, // Select one switch set (1-5) to open on all channels
+	CMD_SELECT, // Select one switch set (1-5) to open on all channels
 	CMD_LOAD, // Pulse the LD line, without changing shift registers
 	CMD_CLOCK, // Start the clock with no data (all zeros)
 	CMD_STOP // Stop all operations

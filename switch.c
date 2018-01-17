@@ -31,3 +31,30 @@ void switches_all(switches_t &switches, uint8_t state) {
 	for (size_t i; i < NUM_SWITCHES; i += 1)
 		switches->switches[i].byte = state;
 }
+
+/** 
+ * Return the bitmask corresponding to a given switch char:
+ * i.e. A = 1, B = 2, C = 4 ...
+ * For an invalid character, return 0.
+ */
+uint8_t switches_mask(uint8_t c) {
+    switch (c) {
+    case 'a':
+    case 'A':
+        return 1;
+    case 'b':
+    case 'B':
+        return 2;
+    case 'c':
+    case 'C':
+        return 4;
+    case 'd':
+    case 'D':
+        return 8;
+    case 'e':
+    case 'E':
+        return 16;
+    default:
+        return 0;
+    }
+}
