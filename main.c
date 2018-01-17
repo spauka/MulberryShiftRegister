@@ -22,10 +22,14 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+// Include generated header files
 #include "project.h"
 
-#include "SPIM.h"
+#include "usb_utils.h"
 
+/**
+ * Returns the minimum of two values
+ */
 uint32_t min(uint32_t a, uint32_t b) {
     return (a < b) ? a : b;
 }
@@ -39,84 +43,31 @@ void SPIM_TX_ISR_ExitCallback(void) {
     }
 }
 
-#define USBFS_DEVICE    (0u)
-
-/* The buffer size is equal to the maximum packet size of the IN and OUT bulk
-* endpoints.
-*/
-#define USBUART_BUFFER_SIZE (64u)
-#define LINE_STR_LENGTH     (20u)
-char8* parity[] = {"None", "Odd", "Even", "Mark", "Space"};
-char8* stop[]   = {"1", "1.5", "2"};
 
 int main(void)
 {
-    uint8_t buffer[USBUART_BUFFER_SIZE];
-    uint32_t count = 0;
-    
     CyGlobalIntEnable; /* Enable global interrupts. */
 
     /* Start the SPI interface */
     uint8_t data_out[SPIM_TX_BUFFER_SIZE];
     memset(data_out, 0x01, SPIM_TX_BUFFER_SIZE);
     SPIM_Start();
+
+    /* Empty the USB input buffer */
+    memset(usb_input_buffer.buf, 0x00, USBUART_BUFFER_SIZE);
+    usb_input_buffer.buf_size = 0;
     
     /* Start USBFS operation with 5-V operation. */
     USBUART_Start(USBFS_DEVICE, USBUART_5V_OPERATION);
 
     for(;;)
     {
-        /* Host can send double SET_INTERFACE request. */
-        if (USBUART_IsConfigurationChanged())
-        {
-            /* Initialize IN endpoints when device is configured. */
-            if (USBUART_GetConfiguration())
-            {
-                /* Enumeration is done, enable OUT endpoint to receive data 
-                 * from host. */
-                USBUART_CDC_Init();
-            }
-        }
+        // Check for a USB UART config change
+        check_usb_uart_config_change();
 
-        /* Service USB CDC when device is configured. */
-        if (USBUART_GetConfiguration())
-        {
-            /* Check for input data from host. */
-            if (USBUART_DataIsReady())
-            {
-                /* Read received data and re-enable OUT endpoint. */
-                count = USBUART_GetAll(buffer);
-
-                if (count > 0)
-                {
-                    /* Wait until component is ready to send data to host. */
-                    while (USBUART_CDCIsReady() == 0);
-
-                    /* Send data back to host. */
-                    USBUART_PutData(buffer, count);
-                    
-                    /* And write it out to SPI too */
-                    for (uint32_t i = 0; i < count; i += 20) {
-                        SPIM_PutArray(buffer+i, min(count-i, 20));
-                    }
-
-                    /* If the last sent packet is exactly the maximum packet 
-                    *  size, it is followed by a zero-length packet to assure
-                    *  that the end of the segment is properly identified by 
-                    *  the terminal.
-                    */
-                    if (USBUART_BUFFER_SIZE == count)
-                    {
-                        /* Wait until component is ready to send data to PC. */
-                        while (0u == USBUART_CDCIsReady())
-                        {
-                        }
-
-                        /* Send zero-length packet to PC. */
-                        USBUART_PutData(NULL, 0u);
-                    }
-                }
-            }
+        // Read in USB data
+        if (USBUART_GetConfiguration() != USB_NOT_CONFIGURED) {
+            read_usb_data();
         }
     }
 }
