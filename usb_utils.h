@@ -28,6 +28,8 @@ DEALINGS IN THE SOFTWARE.
 #include <stddef.h>
 #include <stdint.h>
     
+#include "switch.h"
+    
 typedef enum {
 	USB_NOT_CONFIGURED = 0,
 	USB_NOT_READY = 0,
@@ -105,6 +107,6 @@ usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **a
 /**
  * Run a command based on a complete line of input.
  */
-usb_status_t do_command(char *buffer);
+usb_status_t do_command(char* buffer, switches_t *state);
 
 #endif

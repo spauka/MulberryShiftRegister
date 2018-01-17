@@ -105,13 +105,13 @@ usb_status_t read_usb_data(usb_buf_t *usb_input_buffer) {
             // In the case of an overflow, we'll just reset the buffer
             // The overflow flag is set such that we can ignore the next (partial)
             // message.
-            if ((count + usb_input_buffer.buf_size) > USBUART_BUFFER_SIZE) {
-                usb_input_buffer.buf_size = 0;
-                usb_input_buffer.overflow = 1;
+            if ((count + usb_input_buffer->buf_size) > USBUART_BUFFER_SIZE) {
+                usb_input_buffer->buf_size = 0;
+                usb_input_buffer->overflow = 1;
                 return USB_BUF_OVERFLOW;
             }
-            memcpy(usb_input_buffer.buf + usb_input_buffer.buf_size, buffer, count);
-            usb_input_buffer.buf_size += count;
+            memcpy(usb_input_buffer->buf + usb_input_buffer->buf_size, buffer, count);
+            usb_input_buffer->buf_size += count;
         }
     }
     return USB_SUCCESS;
@@ -124,26 +124,26 @@ usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state) {
     const size_t term_len = sizeof(term)/sizeof(char) - 1;
 
     // Look for terminators
-    if (usb_input_buffer.buf_size < term_len)
+    if (usb_input_buffer->buf_size < term_len)
         return USB_SUCCESS;
-    for (size_t i = 0; i < usb_input_buffer.buf_size - (term_len-1); i += 1) {
-        if (memcmp(usb_input_buffer.buf + i, term, term_len) == 0) {
+    for (size_t i = 0; i < usb_input_buffer->buf_size - (term_len-1); i += 1) {
+        if (memcmp(usb_input_buffer->buf + i, term, term_len) == 0) {
             // Ignore if the last command overflowed, we may be looking at a partial message
-            if (usb_input_buffer.overflow == 0) {
+            if (usb_input_buffer->overflow == 0) {
                 // We've found a terminator, handle the command
-                usb_input_buffer.buf[i] = '\0';
+                usb_input_buffer->buf[i] = '\0';
                 write_usb((uint8_t *)"Command: \"", 11);
-                write_usb((uint8_t *)usb_input_buffer.buf, i - (term_len-1));
+                write_usb((uint8_t *)usb_input_buffer->buf, i - (term_len-1));
                 write_usb((uint8_t *)"\"\r\n", 3);
             } else {
-                usb_input_buffer.overflow = 0;
+                usb_input_buffer->overflow = 0;
             }
 
             // Shuffle the buffer down
-            const char *eoc = usb_input_buffer.buf + i + (term_len-1);
-            const size_t len_remain = usb_input_buffer.buf_size - i - (term_len);
-            memmove(usb_input_buffer.buf, eoc, len_remain);
-            usb_input_buffer.buf_size = len_remain;
+            const char *eoc = usb_input_buffer->buf + i + (term_len-1);
+            const size_t len_remain = usb_input_buffer->buf_size - i - (term_len);
+            memmove(usb_input_buffer->buf, eoc, len_remain);
+            usb_input_buffer->buf_size = len_remain;
 
             // Reset the loop to the beginning of the list
             i = -1;
@@ -171,7 +171,7 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     uint8_t out_buffer[SPIM_TX_BUFFER_SIZE];
 
     // Extract the command from the command line
-    extract_params(buffer, &cmd, *argc, argv);
+    extract_params(buffer, &cmd, &argc, argv);
 
     // Switch on the extracted command
     switch(cmd) {
