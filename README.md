@@ -1,2 +1,2 @@
-# MulberryShiftRegister
+# ShiftRegisterControl
 Shift Register Control
