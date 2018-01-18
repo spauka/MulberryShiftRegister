@@ -82,6 +82,14 @@ int main(void)
             // Check whether there is a command terminator in the buffer
             parse_usb_buffer(&usb_input_buffer, &switch_states);
         }
+
+        // If the clock output is enabled, constantly fill the TX buffer with
+        // blank bytes
+        if (CLK_OUT) {
+            if (SPIM_GetTxBufferSize() < 4) {
+                SPIM_WriteTxData(0x00);
+            }
+        }
     }
 }
 

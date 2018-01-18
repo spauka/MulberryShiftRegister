@@ -44,6 +44,11 @@ const cmd_map_t commands[] = {
 };
 
 /**
+ * Global clock output state
+ */
+uint8_t CLK_OUT = 0;
+
+/**
  * Initialize USB buffer
  */
 usb_status_t init_usb_buffer(usb_buf_t *buf) {
@@ -155,6 +160,8 @@ usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state) {
                 // Execute the command
             	do_command(usb_input_buffer->buf, state);
             } else {
+            	// If we had an overflow on the last command, ignore the potentially
+            	// partial message
                 usb_input_buffer->overflow = 0;
             }
 
@@ -245,7 +252,10 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     case CMD_CLEAR:
         switches_all(state, 0x00);
         switches_pack(state, out_buffer);
-        SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+        if (CLK_OUT == 0)
+        	SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+        else
+        	return USB_CLOCK_ON;
         break;
     case CMD_WRITE:
     	// TODO: Write this handler
@@ -256,16 +266,21 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     		return USB_INVALID_ARG;
     	switches_all(state, switches_mask(argv[1][0]));
     	switches_pack(state, out_buffer);
-    	SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+    	if (CLK_OUT == 0)
+    		SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+    	else
+    		return USB_CLOCK_ON;
         break;
     case CMD_LOAD:
-    	LD_PulseGen_Write(1u);
+    	if (CLK_OUT == 0)
+    		LD_PulseGen_Write(1u);
     	break;
     case CMD_CLOCK:
-    	// TODO: Write this
+    	CLK_OUT = 1;
    		break;
    	case CMD_STOP:
-   		// TODO: Write this
+   		CLK_OUT = 0;
+   		SPIM_ClearTxBuffer();
    		break;
     default:
         // TODO: Write a default case here
