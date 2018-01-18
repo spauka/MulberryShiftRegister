@@ -22,11 +22,26 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+
 #include "project.h"
 #include "usb_utils.h"
+#include "switch.h"
 
 const char* parity[] = {"None", "Odd", "Even", "Mark", "Space"};
 const char* stop[]   = {"1", "1.5", "2"};
+
+const cmd_map_t commands[] = {
+	{"NOOP", CMD_NOOP},
+	{"CLEAR", CMD_CLEAR},
+	{"WRITE", CMD_WRITE},
+	{"SELECT", CMD_SELECT},
+	{"LOAD", CMD_LOAD},
+	{"CLOCK", CMD_CLOCK},
+	{"STOP", CMD_STOP}
+};
 
 /**
  * Initialize USB buffer
@@ -136,6 +151,9 @@ usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state) {
                 write_usb((uint8_t *)"Command: \"", 11);
                 write_usb((uint8_t *)usb_input_buffer->buf, i - (term_len-1));
                 write_usb((uint8_t *)"\"\r\n", 3);
+
+                // Execute the command
+            	do_command(usb_input_buffer->buf, state);
             } else {
                 usb_input_buffer->overflow = 0;
             }
@@ -157,7 +175,53 @@ usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state) {
  * Extract parameters from a command
  */
 usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **argv) {
-    // TODO: Write command parser
+    // First, figure out the length of the command
+    size_t len = strlen(buffer);
+    
+    // Next, loop through the string looking for whitespace
+    size_t argc_actual = 0;
+
+    // The first argument starts at zero
+    argv[0] = buffer;
+    argc_actual = 1;
+    for (size_t i = 0; i < len; i += 1) {
+    	// If we hit a whitespace character, we have a new argument
+    	if (isspace(buffer[i])) {
+    		// This becomes a whitespace
+    		buffer[i] = '\0';
+    		// Loop until the next non-whitespace character
+    		while(isspace(buffer[i]) || buffer[i] == '\0') {
+    			i += 1;
+    			if (i >= len) break; // Hit end of buffer, stop here
+    		}
+    		if (i >= len) break; // Hit end of buffer, stop here
+    		// Otherwise add to list of arguments
+    		// Check that we aren't going to overflow the list of arguments
+    		if (argc_actual >= *argc)
+    			return USB_INVALID_NUM_ARGS;
+    		argv[argc_actual] = buffer+i;
+    		argc_actual += 1;
+    		i -= 1;
+    	}
+    }
+    // Fill in argc with correct number of commands
+    *argc = argc_actual;
+
+    // We should now have a list of arguments.
+    // Let's figure out what the command is
+    char *cmd_str = argv[0];
+    size_t n_cmds = sizeof(commands)/sizeof(cmd_map_t);
+    *cmd = CMD_INVALID;
+    for (size_t i = 0; i < n_cmds; i += 1) {
+    	if (strcasecmp(cmd_str, commands[i].cmd_str) == 0) {
+    		*cmd = commands[i].cmd;
+    		break;
+    	}
+    }
+    if (*cmd == CMD_INVALID)
+    	return USB_INVALID_CMD;
+
+    return USB_SUCCESS;
 }
 
 /**
@@ -165,15 +229,13 @@ usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **a
  */
 usb_status_t do_command(char* buffer, switches_t *state) {
     command_t cmd = CMD_NOOP;
-    size_t argc = 0;
+    size_t argc = USB_CMD_MAX_ARGS;
     char *argv[USB_CMD_MAX_ARGS] = {0};
 
     // Create a buffer to send over SPI
     uint8_t out_buffer[SPIM_TX_BUFFER_SIZE];
 
     // Extract the command from the command line
-    // Unlike argc/argv in linux, this parameter counts the number of arguments,
-    // the command does not count.
     extract_params(buffer, &cmd, &argc, argv);
 
     // Switch on the extracted command
@@ -186,18 +248,27 @@ usb_status_t do_command(char* buffer, switches_t *state) {
         SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
         break;
     case CMD_WRITE:
-
+    	// TODO: Write this handler
     case CMD_SELECT:
-    	if (argc != 1) // Must be a single argument
+    	if (argc != 2) // Must be a single command + argument
     		return USB_INVALID_NUM_ARGS;
-    	if (strlen(argv[0]) != 1) // Must be a single character
+    	if (strlen(argv[1]) != 1) // Must be a single character
     		return USB_INVALID_ARG;
-    	switches_all(state, switches_mask(argv[0][0]));
+    	switches_all(state, switches_mask(argv[1][0]));
     	switches_pack(state, out_buffer);
     	SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
         break;
+    case CMD_LOAD:
+    	LD_PulseGen_Write(1u);
+    	break;
+    case CMD_CLOCK:
+    	// TODO: Write this
+   		break;
+   	case CMD_STOP:
+   		// TODO: Write this
+   		break;
     default:
-        //TODO: Write a default case here
+        // TODO: Write a default case here
         break;
     }
     return USB_SUCCESS;

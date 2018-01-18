@@ -35,12 +35,12 @@ typedef struct __attribute__((packed)) {
     union {
         uint8_t byte;
     	struct __attribute__((packed)) {
-            uint8_t pack:3;
-    		uint8_t a:1;
-    		uint8_t b:1;
+            uint8_t e:1;
+            uint8_t d:1;
     		uint8_t c:1;
-    		uint8_t d:1;
-    		uint8_t e:1;
+            uint8_t b:1;
+            uint8_t a:1;
+            uint8_t pack:3;
     	};
     } switches[NUM_SWITCHES];
 } switches_t ;

@@ -50,7 +50,8 @@ typedef enum {
 	CMD_SELECT, // Select one switch set (1-5) to open on all channels
 	CMD_LOAD, // Pulse the LD line, without changing shift registers
 	CMD_CLOCK, // Start the clock with no data (all zeros)
-	CMD_STOP // Stop all operations
+	CMD_STOP, // Stop all operations
+	CMD_INVALID // Invalid Command, not a real command, just a place holder
 } command_t;
 
 // Define buffer parameters
@@ -65,11 +66,19 @@ extern const char* stop[];
 // Term character
 static const char term[] = "\r";
 
+// Mapping from strings to chars
 typedef struct {
     char buf[USBUART_BUFFER_SIZE];
     size_t buf_size;
     uint8_t overflow;
 } usb_buf_t;
+
+/* Commands mapping */
+typedef struct {
+	char *cmd_str;
+	command_t cmd;
+} cmd_map_t;
+extern const cmd_map_t commands[];
 
 /**
  * Initialize USB buffer
@@ -102,7 +111,8 @@ usb_status_t parse_usb_buffer(usb_buf_t *usb_input_buffer, switches_t *state);
  * 		buffer: String containing the command passed in (space separated)
  * 		cmd: Returns the extracted command
  * 		argc: contains the maxmimum number of arguments that can be returned in argv.
- * 			  This will be filled with the actual number of arguments returned.
+ * 			  This will be filled with the actual number of arguments returned, including
+ * 			  one for the command.
  * 		argv: array of pointers to strings of arguments
  */
 usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **argv);
