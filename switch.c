@@ -42,25 +42,10 @@ void switches_all(switches_t *switches, uint8_t state) {
  * For an invalid character, return 0.
  */
 uint8_t switches_mask(uint8_t c) {
-    switch (c) {
-    case 'a':
-    case 'A':
-        return 16;
-    case 'b':
-    case 'B':
-        return 8;
-    case 'c':
-    case 'C':
-        return 4;
-    case 'd':
-    case 'D':
-        return 2;
-    case 'e':
-    case 'E':
-        return 1;
-    default:
-        return 0;
-    }
+	c = 'e' - tolower(c);
+	if (c > 4)
+		return 0;
+	return (1 << c);
 }
 
 /**
