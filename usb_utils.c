@@ -234,10 +234,22 @@ usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **a
 /**
  * Parse command
  */
+typedef union {
+	struct {
+		uint64_t upper;
+		uint64_t lower;
+	};
+	uint8_t bytes[20];
+} pack_write_t;
+uint8_t hex_start[] = {'0', 'x'};
 usb_status_t do_command(char* buffer, switches_t *state) {
     command_t cmd = CMD_NOOP;
     size_t argc = USB_CMD_MAX_ARGS;
     char *argv[USB_CMD_MAX_ARGS] = {0};
+
+    pack_write_t buf;
+	buf.upper = 0;
+	buf.lower = 0;
 
     // Create a buffer to send over SPI
     uint8_t out_buffer[SPIM_TX_BUFFER_SIZE];
@@ -258,7 +270,18 @@ usb_status_t do_command(char* buffer, switches_t *state) {
         	return USB_CLOCK_ON;
         break;
     case CMD_WRITE:
-    	// TODO: Write this handler
+    	if (argc != 2) // Must be a single command + argument
+    		return USB_INVALID_NUM_ARGS;
+    	if (memcmp(argv[1], hex_start, 2) == 0) // If we start with "0x" move pointer past this
+    		argv[1] += 2;
+
+    	// Split the input argument into upper/lower pieces
+    	{
+    		size_t len = strlen(argv[1]);
+    		if (len > 16) {
+    			size_t start = len - 16;
+    		}
+    	}
     case CMD_SELECT:
     	if (argc != 2) // Must be a single command + argument
     		return USB_INVALID_NUM_ARGS;
@@ -283,8 +306,7 @@ usb_status_t do_command(char* buffer, switches_t *state) {
    		SPIM_ClearTxBuffer();
    		break;
     default:
-        // TODO: Write a default case here
-        break;
+        return USB_INVALID_CMD;
     }
     return USB_SUCCESS;
 }
