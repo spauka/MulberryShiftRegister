@@ -49,12 +49,13 @@ typedef struct __attribute__((packed)) {
  * Set all switches to a given state
  * args:
  *      state: a bitfield from 0 to 0x1F representing the state
- *      of the 5 switches (0 = all off, 1 = E, 2 = D, 3 = E+D ...)
+ *      of the 5 switches (0 = all off, 16 = E, 8 = D, 24 = E+D ...)
  */
 void switches_all(switches_t *switches, uint8_t state);
 
 /**
  * Pack switches into a 20-byte string to be sent over SPI
+ * Note: this function corrects for missing SR before bit 80
  * args:
  *      state: the state of all switches
  *      out_buffer: pointer to at least 20 bytes of memory which will contain
@@ -64,7 +65,7 @@ void switches_pack(switches_t *switches, uint8_t *out_buffer);
 
 /** 
  * Return the bitmask corresponding to a given switch char:
- * i.e. A = 1, B = 2, C = 4 ...
+ * i.e. A/a = 16, B/b = 8, C/c = 4, D/d = 2, E/e = 1
  * For an invalid character, return 0.
  */
 uint8_t switches_mask(uint8_t c); 

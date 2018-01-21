@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
  */
 void switches_all(switches_t *switches, uint8_t state) {
 	for (size_t i = 0; i < NUM_SWITCHES; i += 1)
-		switches->switches[i].byte = state;
+		switches->switches[i].byte = state & 0x1F;
 }
 
 /** 
