@@ -39,6 +39,7 @@ typedef enum {
 	USB_INVALID_NUM_ARGS = 4,
 	USB_INVALID_ARG = 5,
 	USB_CLOCK_ON = 6,
+	USB_NOT_IMPLEMENTED = 7,
 	USB_OTHER_FAIL = 0x7F,
 	USB_CONFIG_CHANGED = 0x80,
 	USB_SUCCESS = 0xFF
@@ -63,12 +64,6 @@ static const uint32_t USBFS_DEVICE = 0u;
 // Define CDC properties
 extern const char* parity[];
 extern const char* stop[];
-
-// Term character
-static const char term[] = "\r";
-
-// Global state
-extern uint8_t CLK_OUT;
 
 // Mapping from strings to chars
 typedef struct {

@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #include <ctype.h>
 
 #include "project.h"
+#include "globals.h"
 #include "usb_utils.h"
 #include "switch.h"
 
@@ -42,11 +43,6 @@ const cmd_map_t commands[] = {
 	{"CLOCK", CMD_CLOCK},
 	{"STOP", CMD_STOP}
 };
-
-/**
- * Global clock output state
- */
-uint8_t CLK_OUT = 0;
 
 /**
  * Initialize USB buffer
@@ -234,22 +230,11 @@ usb_status_t extract_params(char *buffer, command_t *cmd, size_t *argc, char **a
 /**
  * Parse command
  */
-typedef union {
-	struct {
-		uint64_t upper;
-		uint64_t lower;
-	};
-	uint8_t bytes[20];
-} pack_write_t;
 uint8_t hex_start[] = {'0', 'x'};
 usb_status_t do_command(char* buffer, switches_t *state) {
     command_t cmd = CMD_NOOP;
     size_t argc = USB_CMD_MAX_ARGS;
     char *argv[USB_CMD_MAX_ARGS] = {0};
-
-    pack_write_t buf;
-	buf.upper = 0;
-	buf.lower = 0;
 
     // Create a buffer to send over SPI
     uint8_t out_buffer[SPIM_TX_BUFFER_SIZE];
@@ -264,8 +249,10 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     case CMD_CLEAR:
         switches_all(state, 0x00);
         switches_pack(state, out_buffer);
-        if (CLK_OUT == 0)
+        if (CLK_OUT == 0) {
+        	PULSE_LD = 1;
         	SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+        }
         else
         	return USB_CLOCK_ON;
         break;
@@ -274,14 +261,7 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     		return USB_INVALID_NUM_ARGS;
     	if (memcmp(argv[1], hex_start, 2) == 0) // If we start with "0x" move pointer past this
     		argv[1] += 2;
-
-    	// Split the input argument into upper/lower pieces
-    	{
-    		size_t len = strlen(argv[1]);
-    		if (len > 16) {
-    			size_t start = len - 16;
-    		}
-    	}
+    	return USB_NOT_IMPLEMENTED;
     case CMD_SELECT:
     	if (argc != 2) // Must be a single command + argument
     		return USB_INVALID_NUM_ARGS;
@@ -289,14 +269,18 @@ usb_status_t do_command(char* buffer, switches_t *state) {
     		return USB_INVALID_ARG;
     	switches_all(state, switches_mask(argv[1][0]));
     	switches_pack(state, out_buffer);
-    	if (CLK_OUT == 0)
+    	if (CLK_OUT == 0) {
+    		PULSE_LD = 1;
     		SPIM_PutArray(out_buffer, SPIM_TX_BUFFER_SIZE);
+    	}
     	else
     		return USB_CLOCK_ON;
         break;
     case CMD_LOAD:
     	if (CLK_OUT == 0)
     		LD_PulseGen_Write(1u);
+    	else
+    		return USB_CLOCK_ON;
     	break;
     case CMD_CLOCK:
     	CLK_OUT = 1;

@@ -27,45 +27,54 @@ DEALINGS IN THE SOFTWARE.
 // Include generated header files
 #include "project.h"
 
+#include "globals.h"
 #include "usb_utils.h"
 #include "switch.h"
+
+/**
+ * Global clock output state
+ */
+uint8_t CLK_OUT = 0;
+uint8_t PULSE_LD = 0;
+const char *term = "\r";
 
 /**
  * Write out a pulse on the LD line once the buffer has been cleared
  */
 void SPIM_TX_ISR_ExitCallback(void) {
-    if (SPIM_TX_STATUS_REG & SPIM_STS_SPI_DONE) {
+    if ((SPIM_TX_STATUS_REG & SPIM_STS_SPI_DONE) && (PULSE_LD == 1)) {
         LD_PulseGen_Write(1u);
+        PULSE_LD = 0;
     }
 }
 
 
 int main(void)
 {
+    // Buffer used to store current switch state
     switches_t switch_states;
+    switches_all(&switch_states, 0x00); // Set all closed initially
 
     // Buffer used to store USB commands
     usb_buf_t usb_input_buffer;
+    /* Empty the USB input buffer */
+    init_usb_buffer(&usb_input_buffer);
 
     CyGlobalIntEnable; /* Enable global interrupts. */
 
     /* Start the SPI interface */
-    uint8_t data_out[SPIM_TX_BUFFER_SIZE];
-    memset(data_out, 0x01, SPIM_TX_BUFFER_SIZE);
     SPIM_Start();
-
-    /* Empty the USB input buffer */
-    init_usb_buffer(&usb_input_buffer);
-    
     /* Start USBFS operation with 5-V operation. */
     USBUART_Start(USBFS_DEVICE, USBUART_5V_OPERATION);
 
     for(;;)
     {
         // Check for a USB UART config change
+        // 
         // If it has changed, reset the buffer, this is an indication
         // that the connected has restarted
         if (check_usb_uart_config_change() == USB_CONFIG_CHANGED) {
+            init_usb_buffer(&usb_input_buffer);
         }
 
         // Read in USB data
