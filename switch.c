@@ -71,9 +71,8 @@ void switches_pack(switches_t *switches, uint8_t *out_buffer) {
 		for (size_t j = 0; j < 8; j += 1) {
 			data.ld |= ((uint64_t)(switches->switches[NUM_SWITCHES - (i*8 + j) - 1].byte & 0x1F)) << (j*5 + (1-i/2));
 		}
-		uint8_t *out_buffer_off = out_buffer + 5*i;
 		for (size_t j = 0; j < 6; j += 1) {
-			out_buffer_off[j] |= data.b[j];
+			out_buffer[i*5 + j] |= data.b[j];
 		}
 	}
 	return;
