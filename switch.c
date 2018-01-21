@@ -75,7 +75,7 @@ typedef union {
 	uint8_t b[8];
 } pack_t;
 void switches_pack(switches_t *switches, uint8_t *out_buffer) {
-	// Handle each packing in groups of 40 bytes (8 switches)
+	// Handle each packing in groups of 40 bits (8 switches)
 	// First let's clear the buffer
 	memset(out_buffer, 0x00, 20);
 
