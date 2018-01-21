@@ -38,7 +38,7 @@ void switches_all(switches_t *switches, uint8_t state) {
 
 /** 
  * Return the bitmask corresponding to a given switch char:
- * i.e. A = 1, B = 2, C = 4 ...
+ * i.e. A = 16, B = 8, C = 4, D = 2, E = 1
  * For an invalid character, return 0.
  */
 uint8_t switches_mask(uint8_t c) {
