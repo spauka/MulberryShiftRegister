@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 #include "switch.h"
 #include "usb_utils.h"
 
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 
