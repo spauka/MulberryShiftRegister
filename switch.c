@@ -23,8 +23,10 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "switch.h"
+#include "usb_utils.h"
 
 #include <string.h>
+#include <stdio.h>
 
 /**
  * Set the state of all switches to a given state
@@ -74,7 +76,6 @@ typedef union {
 } pack_t;
 void switches_pack(switches_t *switches, uint8_t *out_buffer) {
 	// Handle each packing in groups of 40 bytes (8 switches)
-	
 	// First let's clear the buffer
 	memset(out_buffer, 0x00, 20);
 
@@ -83,9 +84,12 @@ void switches_pack(switches_t *switches, uint8_t *out_buffer) {
 		pack_t data;
 		data.ld = 0;
 		for (size_t j = 0; j < 8; j += 1) {
-			data.ld |= ((uint64_t)(switches->switches[NUM_SWITCHES - (i*8 + j) - 1].byte & 0x1F)) << (j*5);
+			data.ld |= ((uint64_t)(switches->switches[NUM_SWITCHES - (i*8 + j) - 1].byte & 0x1F)) << (j*5 + (1-i/2));
 		}
-		memcpy(out_buffer + (5*i), data.b, 5);
+		uint8_t *out_buffer_off = out_buffer + 5*i;
+		for (size_t j = 0; j < 6; j += 1) {
+			out_buffer_off[j] |= data.b[j];
+		}
 	}
 	return;
 }
