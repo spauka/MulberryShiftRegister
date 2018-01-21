@@ -31,13 +31,6 @@ DEALINGS IN THE SOFTWARE.
 #include "switch.h"
 
 /**
- * Returns the minimum of two values
- */
-uint32_t min(uint32_t a, uint32_t b) {
-    return (a < b) ? a : b;
-}
-
-/**
  * Write out a pulse on the LD line once the buffer has been cleared
  */
 void SPIM_TX_ISR_ExitCallback(void) {
